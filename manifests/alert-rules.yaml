@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: test-alerts
+  namespace: prometheus-monitoring
+  labels:
+    release: my-prometheus
+spec:
+  groups:
+  - name: example.rules
+    rules:
+    - alert: HighCPUUsage
+      expr: sum(rate(container_cpu_usage_seconds_total[30s])) > 0.5
+      for: 10s
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU usage detected"
+        description: "Container CPU usage is above 50% (TESTTEST)"
+    - alert: WatchdogTestAlert
+      expr: vector(1)
+      labels:
+        severity: testing
+      annotations:
+        summary: "Test alert always firing"
+        description: "This alert is triggered by vector(1) to test the Alertmanager pipeline."

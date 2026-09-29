@@ -1,0 +1,84 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: simple-proxy
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        # 1. Scale up the replicas to match your 3 HAProxy backend nodes
+        replicas: 3
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: envoy
+                      ports:
+                        - containerPort: 10080
+                          hostPort: 80
+                          protocol: TCP
+                        - containerPort: 10443
+                          hostPort: 443
+                          protocol: TCP
+                  # 2. Tell Kubernetes to strictly spread pods across different nodes
+                  affinity:
+                    podAntiAffinity:
+                      requiredDuringSchedulingIgnoredDuringExecution:
+                        - labelSelector:
+                            matchExpressions:
+                              - key: gateway.envoyproxy.io/owning-gateway-name
+                                operator: In
+                                values:
+                                  - public-gateway
+                          topologyKey: kubernetes.io/hostname
+        pod:
+          tolerations:
+            - key: "gateway-api"
+              operator: "Equal"
+              value: "dataplane"
+              effect: "NoSchedule"
+          nodeSelector:
+            gateway-api: "dataplane"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy-gateway-class
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: simple-proxy
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: public-gateway
+  namespace: envoy-gateway-system
+spec:
+  gatewayClassName: envoy-gateway-class
+  addresses:
+    - type: IPAddress
+      value: 192.168.122.1
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: https
+    protocol: TLS
+    port: 443
+    tls:
+      mode: Passthrough
+    allowedRoutes:
+      namespaces:
+        from: All

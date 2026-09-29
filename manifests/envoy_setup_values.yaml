@@ -1,0 +1,36 @@
+# 1. Configures the Envoy Gateway CONTROLLER pod
+deployment:
+  pod:
+    tolerations:
+      - key: "gateway-api"
+        operator: "Equal"
+        value: "dataplane"
+        effect: "NoSchedule"
+    nodeSelector:
+      gateway-api: "dataplane"
+
+# 2. Configures the short-lived TLS CERTGEN initialization job
+certgen:
+  job:
+    tolerations:
+      - key: "gateway-api"
+        operator: "Equal"
+        value: "dataplane"
+        effect: "NoSchedule"
+    nodeSelector:
+      gateway-api: "dataplane"
+
+# 3. Configures all future ENVOY PROXY traffic pods (Crucial!)
+config:
+  envoyGateway:
+    provider:
+      type: Kubernetes
+      kubernetes:
+        gatewayDeployment:
+          tolerations:
+            - key: "gateway-api"
+              operator: "Equal"
+              value: "dataplane"
+              effect: "NoSchedule"
+          nodeSelector:
+            gateway-api: "dataplane"

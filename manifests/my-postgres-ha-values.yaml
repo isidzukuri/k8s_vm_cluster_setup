@@ -1,0 +1,25 @@
+# my-postgres-ha-values.yaml
+
+postgresql:
+  # Define passwords (it's better to use existing secrets, but you can set them here for testing)
+  password: "YourSecurePassword123"
+  recoveringPassword: "YourRecoveryPassword123"
+
+pgpool:
+  # Define the pgpool admin password
+  adminPassword: "YourPgPoolAdminPassword123"
+  
+  # If you want to expose PostgreSQL outside the cluster via NodePort on your VMs:
+  service:
+    type: NodePort
+    nodePorts:
+      postgresql: 30005 # Choose an open port on your VMs between 30000-32767
+
+persistence:
+  # Force a specific storage class if your cluster has multiple, or leave commented for default
+  # storageClass: "your-storage-class-name"
+  size: 3Gi
+
+# Optional: Set resource limits based on your VM sizes
+architecture: replication
+replicaCount: 3

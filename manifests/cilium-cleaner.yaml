@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cilium-node-cleaner
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: cilium-node-cleaner
+  template:
+    metadata:
+      labels:
+        name: cilium-node-cleaner
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+      - operator: Exists # Ensures it runs on control-plane AND dataplane nodes
+      containers:
+      - name: cleaner
+        image: alpine
+        securityContext:
+          privileged: true
+        command:
+        - sh
+        - -c
+        - |
+          echo "Cleaning Cilium leftovers..."
+          rm -rf /etc/cni/net.d/*cilium*
+          rm -rf /var/run/cilium
+          rm -rf /opt/cni/bin/cilium*
+          echo "Done! Sleeping forever."
+          sleep infinity
+        volumeMounts:
+        - name: cni-net
+          mountPath: /etc/cni/net.d
+        - name: cni-bin
+          mountPath: /opt/cni/bin
+        - name: cilium-run
+          mountPath: /var/run/cilium
+      volumes:
+      - name: cni-net
+        hostPath:
+          path: /etc/cni/net.d
+      - name: cni-bin
+        hostPath:
+          path: /opt/cni/bin
+      - name: cilium-run
+        hostPath:
+          path: /var/run/cilium
